@@ -21,6 +21,7 @@
 #include <sstream>						// stringstream for string building
 #include <pthread.h>					// For the pthreads
 #include <time.h>						// Time
+#include <iomanip>						// std::quoted
 
 using namespace std;
 
@@ -145,16 +146,17 @@ void* MonitorMem(void* args)
 /* ReadLine() function to read from the standard input. */
 vector<char*> ReadLine()
 {
+	string line;
 	string word;
 	vector<char*> argv;
 	char* s;
-	while(cin >> word)
+	getline(cin, line);
+	stringstream sin(line);
+	while(sin >> quoted(word))
 	{
 		s = new char[word.length() + 1];
 		strcpy(s, word.c_str());
 		argv.push_back(s);
-		if (cin.get() == '\n')
-			break;
 	}
 	return argv;
 }

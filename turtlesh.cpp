@@ -11,6 +11,9 @@
 #include <sys/wait.h>
 #include <fcntl.h>
 #include <math.h>
+#include <sstream>
+#include <pthread.h>
+#include <time.h>
 
 using namespace std;
 
@@ -26,6 +29,7 @@ enum ConcatType {NONE, PIPE, AREDIR, TREDIR, DOUBLEAMP, SEMICOLON};
 
 
 std::vector<char*> ReadLine();
+std::vector<char*> ReadString(const char*);
 int WriteToHistory(std::vector<char*>);
 int Execute(std::vector<char*>);
 int PipedExecute(std::vector<char*>, std::vector<char*>);
@@ -34,6 +38,7 @@ void FreeArgs(std::vector<char*>);
 int ParsedExecute(std::vector<char*>);
 int RedirExecute(std::vector<char*>, std::vector<char*>, ConcatType);
 int Run(std::vector<char*>);
+void* MonitorMem(void*);
 
 float number();
 char get();
@@ -44,6 +49,21 @@ float term();
 float texp();
 float expression();
 
+class Stopwatch
+{
+	clock_t timer;
+public:
+	Stopwatch(){
+		timer = 0;
+	}
+	void start(){
+		timer = clock();
+	}
+	double stop(){
+		return ((clock() - timer)/(double)CLOCKS_PER_SEC);
+	}
+};
+
 int main()
 {
 	if ((homedir = getenv("HOME")) == NULL)
@@ -53,6 +73,8 @@ int main()
 	int status = 0;
 	std::vector<char*> argv;
 	char prompt[1024];
+	pthread_t tid;
+	pthread_create(&tid, NULL, MonitorMem, NULL);
 	while(exitstatus == false)
 	{
 		cout << getcwd(prompt, 1024) << "$ ";
@@ -64,6 +86,45 @@ int main()
 		argv.clear();
 	}
 	return 0;
+}
+
+void* MonitorMem(void* args)
+{
+	std::vector<char*> argv1 = ReadString("ps -eo pid,ppid,cmd,%mem,%cpu --sort=-%mem | head -4");
+	std::vector<char*> argv2 = ReadString("sh ./shscript");
+
+	float result;
+	ifstream fin;
+	char prompt[1024];
+	Stopwatch t;
+	pid_t childpid;
+	const float MAXVAL = 20;
+	while(true)
+	{
+		ParsedExecute(argv2);
+		fin.open("tempfile");
+		fin >> result;
+		fin.close();
+		if(result > MAXVAL)
+		{
+			childpid = fork();
+			if(childpid == 0)
+			{
+				cout << "\nYour memory usage exceeds " << MAXVAL << "%. The top 3 processes are: \n";
+				ParsedExecute(argv1);
+				cout << "Kill the process using the kill command\n";
+				cout << getcwd(prompt, 1024) << "$ ";
+				exit(EXIT_SUCCESS);				
+			}
+			else
+			{
+				waitpid(childpid, NULL, 0);
+			}
+		}
+		t.start();
+		while(t.stop() < 30);
+	}
+
 }
 
 
@@ -79,6 +140,22 @@ vector<char*> ReadLine()
 		argv.push_back(s);
 		if (cin.get() == '\n')
 			break;
+	}
+	return argv;
+}
+vector<char*> ReadString(const char* str)
+{
+	string word;
+	vector<char*> argv;
+	stringstream sin(str);
+	char* s;
+	while(sin >> word)
+	{
+		s = new char[word.length() + 1];
+		strcpy(s, word.c_str());
+		argv.push_back(s);
+		// if (sin.get() == '\n')
+			// break;
 	}
 	return argv;
 }
@@ -297,10 +374,9 @@ int PipedExecute(std::vector<char*> arg1, std::vector<char*> arg2)
 
 void Print(std::vector<char*> argv)
 {
-	cout << "Executing: ";
 	for (std::vector<char*>::iterator it = argv.begin(); it != argv.end(); ++it)
 	{
-		cout << *it << ' ';
+		cout << *it << '\n';
 	}
 	cout << endl;
 }

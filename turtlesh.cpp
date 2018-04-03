@@ -23,6 +23,8 @@ const char *homedir;
 
 bool exitstatus = false;
 
+float MAXMEMLIMIT = 70;
+
 char* expressionToParse;
 
 enum ConcatType {NONE, PIPE, AREDIR, TREDIR, DOUBLEAMP, SEMICOLON}; 
@@ -98,19 +100,18 @@ void* MonitorMem(void* args)
 	char prompt[1024];
 	Stopwatch t;
 	pid_t childpid;
-	const float MAXVAL = 20;
 	while(true)
 	{
 		ParsedExecute(argv2);
 		fin.open("tempfile");
 		fin >> result;
 		fin.close();
-		if(result > MAXVAL)
+		if(result > MAXMEMLIMIT)
 		{
 			childpid = fork();
 			if(childpid == 0)
 			{
-				cout << "\nYour memory usage exceeds " << MAXVAL << "%. The top 3 processes are: \n";
+				cout << "\nYour memory usage exceeds " << MAXMEMLIMIT << "%. The top 3 processes are: \n";
 				ParsedExecute(argv1);
 				cout << "Kill the process using the kill command\n";
 				cout << getcwd(prompt, 1024) << "$ ";
@@ -445,6 +446,20 @@ int Run(std::vector<char*> argv)
 		{
 			expressionToParse = argv[1];
 			cout << expression() << endl;
+			return 0;
+		}
+	}
+	else if ( !strcmp(argv[0], "setmemlimit") )
+	{
+		if(argv.size() < 2)
+		{
+			fprintf(stderr, "Turtle: expected argument to \"setmemlimit\"\n");
+			return 1;
+		}
+		else
+		{
+			expressionToParse = argv[1];
+			MAXMEMLIMIT = expression();
 			return 0;
 		}
 	}

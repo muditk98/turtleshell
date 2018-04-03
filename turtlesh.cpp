@@ -1,19 +1,26 @@
-#include <iostream>
-#include <stdio.h>
-#include <unistd.h>
-#include <string>
-#include <cstring>
-#include <vector>
-#include <fstream>
-#include <sys/types.h>
-#include <pwd.h>
-#include <stdlib.h>
-#include <sys/wait.h>
-#include <fcntl.h>
-#include <math.h>
-#include <sstream>
-#include <pthread.h>
-#include <time.h>
+/*
+* Turtleshell - A simple and easy to use shell. All commands and redirects 
+* are same as the ones in bash. Also supports a custom math mode and memory
+* tracker.
+*/
+
+
+#include <iostream>                     // cin, cout
+#include <stdio.h>                      // System flags
+#include <unistd.h>                     // fork() and pthread creation
+#include <string>                       // For the strings
+#include <cstring>                      // strcat(), strcmp(), etc
+#include <vector>						// For the vectors
+#include <fstream>						// For file handling
+#include <sys/types.h> 					// wait()
+#include <pwd.h>						// Working directory
+#include <stdlib.h>						// General utility functions
+#include <sys/wait.h>					// wait()
+#include <fcntl.h>						// dup(),dup2()
+#include <math.h>						// For the math
+#include <sstream>						// stringstream for string building
+#include <pthread.h>					// For the pthreads
+#include <time.h>						// Time
 
 using namespace std;
 
@@ -29,6 +36,7 @@ char* expressionToParse;
 
 enum ConcatType {NONE, PIPE, AREDIR, TREDIR, DOUBLEAMP, SEMICOLON}; 
 
+/*GENERAL FUNCTIONS */
 
 std::vector<char*> ReadLine();
 std::vector<char*> ReadString(const char*);
@@ -42,6 +50,8 @@ int RedirExecute(std::vector<char*>, std::vector<char*>, ConcatType);
 int Run(std::vector<char*>);
 void* MonitorMem(void*);
 
+
+/* MATH RELATED FUNCTIONS*/
 float number();
 char get();
 char peek();
@@ -51,6 +61,7 @@ float term();
 float texp();
 float expression();
 
+/* Stopwatch class - A stopwatch to measure time. */
 class Stopwatch
 {
 	clock_t timer;
@@ -68,6 +79,7 @@ public:
 
 int main()
 {
+	/* Get home directory */
 	if ((homedir = getenv("HOME")) == NULL)
 	{
 	    homedir = getpwuid(getuid())->pw_dir;
@@ -76,13 +88,12 @@ int main()
 	std::vector<char*> argv;
 	char prompt[1024];
 	pthread_t tid;
-	pthread_create(&tid, NULL, MonitorMem, NULL);
-	while(exitstatus == false)
-	{
+	pthread_create(&tid, NULL, MonitorMem, NULL);  // Memory monitoring thread.
+	while(exitstatus == false)                     // Main loop - The shell exits when an appropriate
+	{                                              // exit signal is given.
 		cout << getcwd(prompt, 1024) << "$ ";
 		argv = ReadLine();
 		status = ParsedExecute(argv);
-		// Print(argv);
 		WriteToHistory(argv);
 		FreeArgs(argv);
 		argv.clear();
@@ -90,6 +101,9 @@ int main()
 	return 0;
 }
 
+/* Memory monitoring - Every 30s, this function outputs the top 3 processes sorted 
+ * by memory usage along with their PIDs. The user can choose to kill any process 
+ * that is using too much memory.*/
 void* MonitorMem(void* args)
 {
 	std::vector<char*> argv1 = ReadString("ps -eo pid,ppid,cmd,%mem,%cpu --sort=-%mem | head -4");
@@ -128,7 +142,7 @@ void* MonitorMem(void* args)
 
 }
 
-
+/* ReadLine() function to read from the standard input. */
 vector<char*> ReadLine()
 {
 	string word;
@@ -144,6 +158,8 @@ vector<char*> ReadLine()
 	}
 	return argv;
 }
+
+/* Takes a constant character string and breaks it up accordingly. */
 vector<char*> ReadString(const char* str)
 {
 	string word;
@@ -155,12 +171,11 @@ vector<char*> ReadString(const char* str)
 		s = new char[word.length() + 1];
 		strcpy(s, word.c_str());
 		argv.push_back(s);
-		// if (sin.get() == '\n')
-			// break;
 	}
 	return argv;
 }
 
+/* This function writes all commands to the history file specified. */
 int WriteToHistory(std::vector<char*> argv)
 {
 	fstream fout;
@@ -178,6 +193,7 @@ int WriteToHistory(std::vector<char*> argv)
 	return 1;
 }
 
+/* Creates a child process and replaces it with the specified command process. */
 int Execute(std::vector<char*> argv)
 {
 	pid_t childpid;
@@ -213,6 +229,9 @@ int Execute(std::vector<char*> argv)
 
 }
 
+/* Parses the input obtained from the ReadLine() function and 
+ * splits it according to the type of separator found. Then it
+ * executes the commands within, recursively if need be. */
 int ParsedExecute(std::vector<char*> argv)
 {
 	ConcatType result = NONE;
@@ -251,7 +270,7 @@ int ParsedExecute(std::vector<char*> argv)
 		return Run(argv);
 	}
 
-	std::vector<char*> arg1(argv.begin(), i);
+	std::vector<char*> arg1(argv.begin(), i);       
 	std::vector<char*> arg2(i+1, argv.end());
 	if (result == PIPE)
 	{
@@ -272,6 +291,8 @@ int ParsedExecute(std::vector<char*> argv)
 	}
 }
 
+/* Executes arg1 and redirects to the file specified by arg2. */
+
 int RedirExecute(std::vector<char*> arg1, std::vector<char*> arg2, ConcatType result)
 {
 	int fd[2];
@@ -291,7 +312,6 @@ int RedirExecute(std::vector<char*> arg1, std::vector<char*> arg2, ConcatType re
 	if(child1 == 0)
 	{
 		// child process
-		// cout << "Entering arg2\n";
 		close(fd[1]);	
 		dup2(fd[0], 0);
 		if(result == AREDIR)
@@ -331,6 +351,7 @@ int RedirExecute(std::vector<char*> arg1, std::vector<char*> arg2, ConcatType re
 	return status;
 }
 
+/* Executes arg1, and then pipes the output to arg2. */
 int PipedExecute(std::vector<char*> arg1, std::vector<char*> arg2)
 {
 	
@@ -373,6 +394,7 @@ int PipedExecute(std::vector<char*> arg1, std::vector<char*> arg2)
 	return status;
 }
 
+/* Utility function to print a vector. */
 void Print(std::vector<char*> argv)
 {
 	for (std::vector<char*>::iterator it = argv.begin(); it != argv.end(); ++it)
@@ -382,6 +404,8 @@ void Print(std::vector<char*> argv)
 	cout << endl;
 }
 
+/* Frees up all the character pointers used by the input argument vector
+ * to manage space. */
 void FreeArgs(std::vector<char*> argv)
 {
 	for (std::vector<char*>::iterator i = argv.begin(); i != argv.end(); ++i)
@@ -390,6 +414,8 @@ void FreeArgs(std::vector<char*> argv)
 	}
 }
 
+/* Looks for shell builtins in the argument vector and executes them. If none are found, calls
+ * Execute() */
 int Run(std::vector<char*> argv)
 {
 	if (argv.size() < 1)
@@ -470,6 +496,7 @@ int Run(std::vector<char*> argv)
 	return 0;
 }
 
+/* MATH FUNCTIONS --- All math implementations for the math mode. */
 
 float factorial(float x)
 {

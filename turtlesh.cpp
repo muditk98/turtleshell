@@ -76,7 +76,7 @@ public:
 	double stop(){
 		return ((clock() - timer)/(double)CLOCKS_PER_SEC);
 	}
-};
+} globalwatch;
 
 int main()
 {
@@ -434,7 +434,13 @@ int Run(std::vector<char*> argv)
 	{
 		if (argv.size() < 2)
 		{
-			fprintf(stderr, "Turtle: expected argument to \"cd\"\n");
+			// fprintf(stderr, "Turtle: expected argument to \"cd\"\n");
+			if (chdir(homedir) != 0) 
+			{
+				perror("Turtle: failed to change directory");
+				return 1;
+			}
+			return 0;
 		} 
 		else 
 		{
@@ -490,6 +496,30 @@ int Run(std::vector<char*> argv)
 			MAXMEMLIMIT = expression();
 			return 0;
 		}
+	}
+	else if ( !strcmp(argv[0], "showmemlimit") )
+	{
+		cout << MAXMEMLIMIT << endl;
+		return 0;
+	}
+	else if ( !strcmp(argv[0], "stopwatch") )
+	{
+		if(argv.size() < 2)
+		{
+			fprintf(stderr, "Turtle: expected argument to \"stopwatch\"\n");
+			return 1;
+		}
+		else if ( !strcmp(argv[1], "start") )
+		{
+			globalwatch.start();
+			return 0;
+		}
+		else if ( !strcmp(argv[1], "stop") )
+		{
+			cout << globalwatch.stop() << endl;
+			return 0;
+		}
+
 	}
 	else
 	{

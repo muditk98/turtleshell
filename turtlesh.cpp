@@ -108,7 +108,7 @@ int main()
 void* MonitorMem(void* args)
 {
 	std::vector<char*> argv1 = ReadString("ps -eo pid,ppid,cmd,%mem,%cpu --sort=-%mem | head -4");
-	std::vector<char*> argv2 = ReadString("sh ./shscript");
+	std::vector<char*> argv2 = ReadString("free | grep Mem | awk \"{print $3/$2 * 100.0}\" > tempfile");
 
 	float result;
 	ifstream fin;
@@ -162,13 +162,13 @@ vector<char*> ReadLine()
 }
 
 /* Takes a constant character string and breaks it up accordingly. */
-vector<char*> ReadString(const char* str)
+vector<char*> ReadString(const char* str = NULL)
 {
 	string word;
 	vector<char*> argv;
 	stringstream sin(str);
 	char* s;
-	while(sin >> word)
+	while(sin >> quoted(word))
 	{
 		s = new char[word.length() + 1];
 		strcpy(s, word.c_str());

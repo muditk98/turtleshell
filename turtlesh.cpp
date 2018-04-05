@@ -5,23 +5,23 @@
 */
 
 
-#include <iostream>                     // cin, cout
-#include <stdio.h>                      // System flags
-#include <unistd.h>                     // fork() and pthread creation
-#include <string>                       // For the strings
-#include <cstring>                      // strcat(), strcmp(), etc
-#include <vector>						// For the vectors
-#include <fstream>						// For file handling
-#include <sys/types.h> 					// wait()
-#include <pwd.h>						// Working directory
-#include <stdlib.h>						// General utility functions
-#include <sys/wait.h>					// wait()
-#include <fcntl.h>						// dup(),dup2()
-#include <math.h>						// For the math
-#include <sstream>						// stringstream for string building
-#include <pthread.h>					// For the pthreads
-#include <time.h>						// Time
-#include <iomanip>						// std::quoted
+#include <iostream>			// cin, cout
+#include <stdio.h>			// System flags
+#include <unistd.h>			// fork() and pthread creation
+#include <string>			// For the strings
+#include <cstring>			// strcat(), strcmp(), etc
+#include <vector>			// For the vectors
+#include <fstream>			// For file handling
+#include <sys/types.h>		// wait()
+#include <pwd.h>			// Working directory
+#include <stdlib.h>			// General utility functions
+#include <sys/wait.h>		// wait()
+#include <fcntl.h>			// dup(),dup2()
+#include <math.h>			// For the math
+#include <sstream>			// stringstream for string building
+#include <pthread.h>		// For the pthreads
+#include <time.h>			// clock_t, clock(), CLOCKS_PER_SEC
+#include <iomanip>			// std::quoted
 
 using namespace std;
 

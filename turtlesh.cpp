@@ -1,6 +1,6 @@
 /*
 * Turtleshell - A simple and easy to use shell. All commands and redirects 
-* are same as the ones in bash. Also supports a custom math mode and memory
+* are same as the ones in bash. Also supports a custom math mode, a stopwatch and memory
 * tracker.
 */
 
@@ -29,40 +29,168 @@ using namespace std;
 
 const char *homedir;
 
+/* 
+* This is set to true when exit is typed into the shell.
+* The shell then quits after checking its value
+*/
 bool exitstatus = false;
 
+
+// The upper memory threshold that is compared to the current ram usage
 float MAXMEMLIMIT = 70;
 
+/*
+* This is used by the math parser
+* Do not allocate directly to this as the original address
+* will be lost after parsing
+*/
 char* expressionToParse;
 
+/* 
+* The different concatenation types that our parser supports are
+* PIPE = "|" Output of first command should become input for second
+* AREDIR = ">" Output of first command should be appended to the file specified in the second
+* TREDIR = ">>" similar to AREDIR, but truncates the file first
+* DOUBLEAMP = "&&" Second command is executed only when first command exits with a success status
+* SEMICOLON = ";" Second command will run after first command. Regardless of the exit status of the first
+*/
 enum ConcatType {NONE, PIPE, AREDIR, TREDIR, DOUBLEAMP, SEMICOLON}; 
 
 /*GENERAL FUNCTIONS */
 
+/*
+* Read a line from the standard input
+* Seperates it based on the standard istream delimiters like a space
+* If some text is surrounded by double quotes " then it is grouped
+* Each token is allocated memory according to its length 
+* All the tokens are pushed into a vector of char*
+* This vector is then returned
+* Eg if the input line is: Hello 12345 "Group this part"
+* Then the tokens will be:
+* Hello
+* 12345
+* Group this part
+*/
 std::vector<char*> ReadLine();
+
+/*
+* Similar to ReadLine but the input line is the argument
+*/
 std::vector<char*> ReadString(const char*);
+
+/*
+* Writes the vector of char* as a line to a the history file
+* The history file is the home directory of the user concatenated with /.turtlesh_history
+* If the home directory is /home/john then the history file will be
+* /home/john/.turtlesh_history
+*/
 int WriteToHistory(std::vector<char*>);
+
+/*
+* This function forks and creates a child process
+* The child process will call execvp on the argument vector
+* execvp replaces the current process with the executable specified by its arguments
+* execvp first searches for the executable in the path of the user
+* The parent process waits for the child to finish execution
+* The exit status of the child is return value of the function
+*/
 int Execute(std::vector<char*>);
+
+/*
+* The first argument must have no concatenators
+* The second argument may have concatenators
+* The program forks and creates a pipe between the parent and the child
+* This pipe takes over the job of stdout for the parent process and stdin for the child process
+* The parent process calls Run on argument1 and the child process calls ParsedExecute on argument2 
+* Return the result of ParsedExecute from child process
+*/
 int PipedExecute(std::vector<char*>, std::vector<char*>);
+
+/*
+* Simply prints out the argument vector as a line to stdout
+*/
 void Print(std::vector<char*>);
+
+/*
+* Frees the memory allocated by each char* in the vector
+*/
 void FreeArgs(std::vector<char*>);
+
+/*
+* Parsed execute looks for the first concatenator in the argument vector
+* If no seperator is found then returns the result of calling Run on the argument
+* If a seperator is found then seperator type is set
+* It then splits the argument vector into two argument vectors at the first concatenator
+* Then the appropriate execution is done based on the seperator type
+*/
 int ParsedExecute(std::vector<char*>);
+
+/*
+* Redirects the output of Running argument 1 to the file specified by argument 2
+* The file is opened in truncate or append mode based on the ConcatType
+*/
 int RedirExecute(std::vector<char*>, std::vector<char*>, ConcatType);
+
+/*
+* Checks whether the argument is a builtin command. If yes, then the appropriate action is taken
+* Else returns Execute called on the argument
+*/
 int Run(std::vector<char*>);
+
+/*
+* Monitors the current memory usage every 30 seconds and compares it to the upper threshold 
+* specified by MAXMEMLIMIT. If usage is greater than limit then it prints out the top 3 
+* processes sorted by memory usage
+*/
 void* MonitorMem(void*);
 
 
 /* MATH RELATED FUNCTIONS*/
+/*
+* returns the floating number found at the current location of expressionToParse
+* stops reading for number when a non digit and non '.' is found
+*/
 float number();
+
+// Gets the value at expressionToParse then increments it
 char get();
+
+// Returns the value at expressionToParse
 char peek();
+
+/*
+* A factor is either a number, or the result of a function, or the expression inside parenthesis
+*/
 float factor();
-float factorial();
+
+// Calculates the factorial of the floor of the input
+float factorial(float);
+
+/*
+* A term is the result of a combination of exponential terms (texp) joined by either a '*' or a '/' or '//'
+* '*' is multiplication
+* '/' is division
+* '/' is floor division
+*/
 float term();
+
+/*
+* A texp is the result of a combination of factors joined by a '^'
+* The result if a^b is a raised to the power b
+*/
 float texp();
+
+/*
+* an expression is the result of a combination of terms joined by either a '+' or a '-'
+* Each term is added or subtracted from the result accordingly
+*/
 float expression();
 
-/* Stopwatch class - A stopwatch to measure time. */
+/* 
+* Stopwatch class - A stopwatch to measure time in seconds. 
+* Use start to initialize the stopwatch
+* stop will return the time difference in seconds from the last start
+*/
 class Stopwatch
 {
 	clock_t timer;

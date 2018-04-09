@@ -12,8 +12,11 @@ Grouping of words with double quotes
 
 stopwatch start|stop
 
+history
+
 math expression
 
 Eg. math l(e^7)*s(pi/2)+cpi+!5-9//2+4.75/3
 
 Translates to ln(e^7)*sin(pi/2) + cos(pi) + factorial(5) + floor(9/2) + 4.75/3
+

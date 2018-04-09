@@ -6,6 +6,8 @@ Recommended compile using g++-7 as some functions (std::quoted) requires C++14 s
 
 Piping '|', Redirection ('>', '>>'), Conditional chaining '&&', Uncondition chaining ';'
 
+Grouping of words with double quotes
+
 ## Extra shell builtins
 
 stopwatch start|stop
